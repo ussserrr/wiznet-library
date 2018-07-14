@@ -125,9 +125,11 @@ sock_deinit(&socket3);
 
 After such operation you can reuse corresponding HW sockets for another purposes.
 
-`sendto()` function can handle overflows: if size of transmitting data is bigger than free space then message is fragmenting onto 2 parts which sending continuously by recursive call.
+`sendto()` function can handle overflows: if size of transmitting data is bigger than free space then message is fragmenting onto 2 parts which sending continuously by recursive call. Schematic illustration of this process:
 
-In order to receive information, 2 functions are available: `recv()` and `recv_alloc()`. First one takes static buffer and writes data from HW RX buffer into it. So the case when the SW buffer is smaller is possible. `recv_alloc()` takes only pointer and allocates SW array by itself so it never overflows and always will have exact size. Let's try to receive and send a data in a loop:
+![Wiznet TX/RX buffers](Wiznet_TX_RX_buffers.png)
+
+In order to receive information, 2 functions are available: `recv()` and `recv_alloc()`. First one takes static buffer and writes data from HW RX buffer into it. So the case when the SW buffer is smaller is possible. `recv_alloc()` takes only pointer and allocates SW array by itself so it never overflows and always will have exact size. These routines also implements algorithms similar to the picture above. Let's try to receive and send a data in a loop:
 ```C
 uint8_t *buf_alloc = NULL;
 while (1) {
