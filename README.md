@@ -109,7 +109,7 @@ if (s3_status == SOCK_STATUS_MACRAW)
 sock_close(&socket3);
 ```
 
-For example, in simple Python UDP server will show:
+For example, simple Python UDP server will show:
 ```
 $ python3 udp_server.py
 Wait for data...
@@ -127,7 +127,45 @@ After such operation you can reuse corresponding HW sockets for another purposes
 
 `sendto()` function can handle overflows: if size of transmitting data is bigger than free space then message is fragmenting onto 2 parts which sending continuously by recursive call.
 
-In order to receive information, 2 functions are available: `recv()` and `recv_alloc()`. First one takes static buffer and writes data from HW RX buffer into it. So the case when the SW buffer is smaller is possible. `recv_alloc()` takes only pointer and allocates SW array by itself so it never overflows and always will have exact size.
+In order to receive information, 2 functions are available: `recv()` and `recv_alloc()`. First one takes static buffer and writes data from HW RX buffer into it. So the case when the SW buffer is smaller is possible. `recv_alloc()` takes only pointer and allocates SW array by itself so it never overflows and always will have exact size. Let's try to receive and send a data in a loop:
+```C
+uint8_t *buf_alloc = NULL;
+while (1) {
+    uint16_t size = recv_alloc(&socket2, &buf_alloc);
+    if (size > 0) sendto(&socket1, buf_alloc, size);
+    HAL_Delay(1000);
+}
+```
+
+or
+```C
+uint8_t buf[70];
+uint32_t cnt = 0;
+while (1) {
+    int num = sprintf((char *)buf, "abcdefghijklmnopqrstuvwxyz. it's a test string, here is a counter ok: %d", cnt++);
+    sendto(&socket3, buf, num+1);
+}
+```
+
+or
+```C
+for (uint32_t i=0; i<sizeof(buf); i++) buf[i] = 0;
+recv(&socket2, buf, sizeof(buf));
+sendto(&socket1, buf, sizeof(buf));
+```
+
+`recv()` and `recv_alloc()` functions aren't blocking so they do not wait for data. Instead they just return '0' if there are no new bytes available. You can check this return value to implement blocking or add this feature right into function' sources.
 
 
-## Examples
+## Interrupts
+Wiznet W5500 has a single HW pin to deliver all kinds of interrupts – general and sockets ones. For not very complex applications you may not to use interrupts – library can work without them entirely. But if you want to, route INT pin to your MCU and enable falling edge trigger interrupt (INT is an active-low signal). In your ISR, call `wiznet_isr_handler()` passing corresponding `wiznet_t` instance as an argument to start handling. Wiznet's interrupts are level-driven so they remain INT pin in a low state until all conditions are met and all flags are cleared. Therefore ISR should looks something like this (consider a STM32 platform):
+```C
+// your platform-specific ISR here
+void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
+    if (GPIO_Pin == WIZNET_INT_Pin) {
+        while (HAL_GPIO_ReadPin(GPIOB, WIZNET_INT_Pin) == 0) wiznet_isr_handler(&wiznet);
+    }
+}
+```
+
+Then `wiznet_isr_handler()` automatically determines a type of the interrupt (currently only sockets interrupts are supported) and you can assign custom actions to be performed.
