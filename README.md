@@ -116,6 +116,8 @@ Wait for data...
 14 b'data over UDP\x00'
 ```
 
+Note that MACRAW mode currently can receive/transmit data only in networks with a 'point-to-point' type of topology.
+
 You can completely remove and unregister socket using `sock_deinit()` function:
 ```C
 sock_deinit(&socket1);
