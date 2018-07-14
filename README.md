@@ -53,12 +53,81 @@ Now you can run `wiznet_init()` function to start communication with the IC and 
 if (wiznet_init(&wiznet) == 0) printf("WIZNET INIT OK\n");
 ```
 
-`wiznet_get_version()` function is used as a last correctness check of Wiznet reset and initialization. It should always return `4` as it stands in datasheet. In practice, Wiznet initialization takes approximately 3 seconds to fully complete. Ethernet LEDs should start blinking if PHY setup was successful.
+During this, RST pin is toggled and 2 flags are polled for completing. `wiznet_get_version()` function is used as a last correctness check of Wiznet reset and initialization. It should always return `4` as it stands in datasheet. In practice, Wiznet initialization takes approximately 3 seconds to fully complete. Ethernet LEDs should start blinking if PHY setup was successful.
 
 If you somehow decide to stop working with Wiznet in your program run `wiznet_deinit()` with your `wiznet_t *` pointer as argument.
 
+Now we can step forward to the socket creation.
+
 
 ## Sockets management
+As it for Wiznet management Socket' life starts from new struct and its filling. Assuming we have UDP socket:
+```C
+socket_t socket1 = socket_t_init();
+socket1.type = SOCK_TYPE_UDP;
+for (uint8_t i=0; i<4; i++) socket1.ip[i] = (uint8_t[]){192,168,1,214}[i];
+socket1.port = 1200;
+socket(&wiznet, &socket1);
+```
+
+We use same pattern for all 3 types of sockets: TCP, UDP and MACRAW. Last line binds given socket to the given Wiznet, opens (and connects, for TCP) it.
+
+Let's create 2 more sockets:
+```C
+socket_t socket2 = socket_t_init();
+socket2.type = SOCK_TYPE_TCP;
+for (uint8_t i=0; i<4; i++) socket2.ip[i] = (uint8_t[]){192,168,1,222}[i];
+socket2.port = 1300;
+socket(&wiznet, &socket2);
+
+socket_t socket3 = socket_t_init();
+socket3.type = SOCK_TYPE_MACRAW;
+for (uint8_t i=0; i<6; i++) socket3.macraw_dst[i] = (uint8_t[]){0xFF,0xFF,0xFF,0xFF,0xFF,0xFF}[i];
+sock_status_t s3_status = socket(&wiznet, &socket3);
+```
+
+`socket` constructor assigns proper HW socket according to the availability and type (e.g., MACRAW can only be opened in Socket0). Currently, all sockets are allocated with default 2kB TX/RX buffers.
+
+Now let's check status (in different ways) and try to send some data over each protocol. Then close sockets:
+```C
+uint8_t msg_udp[] = "data over UDP";
+uint8_t msg_tcp[] = "data over TCP";
+uint8_t msg_macraw[] = "data over MACRAW";
+
+if (socket1.status == SOCK_STATUS_UDP) {
+    sendto(&socket1, msg_udp, sizeof(msg_udp));
+    sock_close(&socket1);
+}
+
+if (socket2.status == SOCK_STATUS_ESTABLISHED) {
+    sendto(&socket2, msg_tcp, sizeof(msg_tcp));
+    sock_discon(&socket2);
+}
+
+if (s3_status == SOCK_STATUS_MACRAW)
+    sendto(&socket3, msg_macraw, sizeof(msg_macraw));
+sock_close(&socket3);
+```
+
+For example, in simple Python UDP server will show:
+```
+$ python3 udp_server.py
+Wait for data...
+14 b'data over UDP\x00'
+```
+
+You can completely remove and unregister socket using `sock_deinit()` function:
+```C
+sock_deinit(&socket1);
+sock_deinit(&socket2);
+sock_deinit(&socket3);
+```
+
+After such operation you can reuse corresponding HW sockets for another purposes.
+
+`sendto()` function can handle overflows: if size of transmitting data is bigger than free space then message is fragmenting onto 2 parts which sending continuously by recursive call.
+
+In order to receive information, 2 functions are available: `recv()` and `recv_alloc()`. First one takes static buffer and writes data from HW RX buffer into it. So the case when the SW buffer is smaller is possible. `recv_alloc()` takes only pointer and allocates SW array by itself so it never overflows and always will have exact size.
 
 
 ## Examples
