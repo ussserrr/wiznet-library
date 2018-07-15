@@ -36,7 +36,8 @@
 // Number of Wiznets
 #define NUM_OF_WIZNETS 1
 
-// Number of sockets available. You should also adjust sock_n_* arrays
+// Number of sockets available. You should also adjust sock_n_* arrays if you
+// change this
 #define NUM_OF_SOCKETS 8
 
 
@@ -51,7 +52,7 @@
 
 // Mode Register and its bits
 #define MR 0x0000  // 1 byte
-//#define MR_RST 7  // SW reset ('1' for reset, wait until '0')
+// #define MR_RST 7  // SW reset ('1' for reset, wait until '0')
 // #define WOL 5  // Wake on LAN
 // #define PB 4  // Ping Block ('0' - disable ping block)
 // #define PPPoE 3  // set this to '1' for ADSL

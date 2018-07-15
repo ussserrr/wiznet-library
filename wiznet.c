@@ -11,14 +11,7 @@
  *  Other global settings and definitions
  */
 
-// timeout for SPI transmitting/receiving (in milliseconds)
-#define WIZNET_SPI_TX_TIMEOUT 0xFFFF
-#define WIZNET_SPI_RX_TIMEOUT 0xFFFF
-
-// Wiznet' Interrupt Assert Waiting Time
-#define IAWT 31249  // 31249 - 5ms @ 25MHz
-
-#define MAX_TCP_SEGMENT_SIZE 1460
+#define MAX_TCP_SEGMENT_SIZE 1460  // recommended datasheet value
 
 // different timeouts (in milliseconds)
 #define WIZNET_TIMEOUT_RESET 8000
@@ -26,6 +19,11 @@
 #define SOCK_TIMEOUT_CONNECT 2000
 #define SOCK_TIMEOUT_CLOSE 1000
 #define SOCK_TIMEOUT_DISCON 2000
+// Wiznet' Interrupt Assert Waiting Time
+#define IAWT 31249  // 31249 - 5ms @ 25MHz
+// timeout for SPI transmitting/receiving (in milliseconds)
+#define WIZNET_SPI_TX_TIMEOUT 100
+#define WIZNET_SPI_RX_TIMEOUT 100
 
 
 /*
@@ -249,7 +247,7 @@ int32_t wiznet_init(wiznet_t *wiznet) {
 void wiznet_deinit(wiznet_t *wiznet) {
     wiznet_hw_reset(wiznet);
 
-	wiznet->_id = -1;
+	wiznet->_id = -1;  // mark the structure as invalid from now
     if (wiznets_cnt) wiznets_cnt--;
     wiznets[wiznet->_id] = NULL;
 }
@@ -259,6 +257,8 @@ void wiznet_deinit(wiznet_t *wiznet) {
  *  Reset Wiznet using hardware pin
  */
 void wiznet_hw_reset(wiznet_t *wiznet) {
+
+    // toggle RST pin from '1' to '0' and then back to '1'
     HAL_GPIO_WritePin(wiznet->RST_CS_Port, wiznet->RST_Pin, GPIO_PIN_RESET);
     HAL_Delay(1);  // 500 us - from datasheet
     HAL_GPIO_WritePin(wiznet->RST_CS_Port, wiznet->RST_Pin, GPIO_PIN_SET);
@@ -424,7 +424,7 @@ sock_status_t socket(wiznet_t *wiznet, socket_t *sock) {
                 break;
             }
     }
-    printf("id: %d, type: %d\n", sock->_id, sock->type);
+    // printf("id: %d, type: %d\n", sock->_id, sock->type);
 
     // choose appropriate register
     uint8_t sock_n_register = sock_n_registers[sock->_id];
