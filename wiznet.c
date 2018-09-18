@@ -1,8 +1,14 @@
-// TODO: picture of RX/TX processes
-// TODO: check socket status when calling sendto() and recv()
-// TODO: update socket status after sending and receiving
 // TODO: use built-in WIZNET timeout feature instead of _millis() (need interrupts)
 // TODO: implement wiznet_sw_reset() and wiznet_phy_reset() functions
+// TODO: complete architecture: store and use Wiznet status, sockets statuses,
+//       change them after every send/receive and so on
+// TODO: separate low-level interface (SPI, GPIO etc.): some sort of read/write byte,
+//       read/write chunk of bytes, assert/release pin
+// TODO: switch debug statements (#ifndef NDEBUG)
+// TODO: align macroses and variables
+// TODO: migrate from enums where there is no needs in them: (e.g.
+//       'typedef socket_status_t int' and macroses to describe different statuses)
+
 
 #include "wiznet.h"
 
